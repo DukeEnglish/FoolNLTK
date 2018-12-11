@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 # -*-coding:utf-8-*-
+# description:
 
 
-from collections import OrderedDict
+from collections import OrderedDict # 有序字典 OrderedDict，实现了对字典对象中元素的排序。https://www.cnblogs.com/gide/p/6370082.html
+
+# 避免输出warning
+
+# TF_CPP_MIN_LOG_LEVEL = 1 //默认设置，为显示所有信息
+# TF_CPP_MIN_LOG_LEVEL = 2 //只显示error和warining信息
+# TF_CPP_MIN_LOG_LEVEL = 3 //只显示error信息
 
 import numpy as np
 import tensorflow as tf
@@ -53,8 +60,12 @@ def main(argv):
         wv = word2vec.Word2vec()
         embed = wv.load_w2v_array(FLAGS.pre_embedding_file, id_to_word)
 
-        word_embedding = tf.constant(embed, dtype=tf.float32)
-        model = BiLSTM(model_config, word_embedding)
+
+        word_embedding = tf.constant(embed, dtype=tf.float32) # 常量
+        print('load bilstm with model_config and word_embedding vector')
+        model = BiLSTM(model_config, word_embedding) 
+
+        print('seg data into batch')
         train_batcher = SegBatcher(FLAGS.train_file, FLAGS.batch_size, num_epochs=FLAGS.max_epoch)
         dev_batcher = SegBatcher(FLAGS.dev_file, FLAGS.batch_size, num_epochs=1)
         test_batcher = SegBatcher(FLAGS.test_file, FLAGS.batch_size, num_epochs=1)
@@ -134,6 +145,7 @@ def main(argv):
                         test_batches.append((chars, tags, sent_lens))
                     except:
                         done = True
+                print('test_batches is', test_batches)
                 test_acc = run_evaluation(test_batches, True)
                 print("test accc %f" % (test_acc))
 
@@ -152,17 +164,21 @@ def main(argv):
             print("start training ...")
             early_stop = False
             for step in range(FLAGS.max_epoch):
+                
                 if sv.should_stop():
                     run_test()
                     break
                 examples = 0
 
-                while examples < train_num:
+                while examples < train_num: # 一共有多少个训练样本，如果没有到头，就可以继续训练
                     if early_stop:
                         break
                     try:
-                        batch = sess.run(train_batcher.next_batch_op)
+                        print('at {} epoch'.format(step))
+                        print('num of examples complete --- ', examples)
+                        batch = sess.run(train_batcher.next_batch_op) # 一次跑32句话，一共跑17次，每17次算一个epoch
                     except Exception as e:
+
                         break
 
                     tags, chars, sent_lens = batch
@@ -174,7 +190,7 @@ def main(argv):
                     }
                     global_step, batch_loss, _ = sess.run([model.global_step, model.loss, model.train_op], feed_dict)
 
-                    print("%d iteration %d loss: %f" % (step, global_step, batch_loss))
+                    print("%d epoch %d loss: %f" % (step, global_step, batch_loss))
                     if global_step % FLAGS.eval_step == 0:
                         print("evaluation .......")
                         acc = run_evaluation(dev_batches)
@@ -189,7 +205,7 @@ def main(argv):
                         elif best_acc < acc:
                             best_acc = acc
                             sv.saver.save(sess, FLAGS.out_dir + "model", global_step=global_step)
-                            print("%d iteration , %d global step best dev acc: %f " % (step, global_step, best_acc))
+                            print("%d epoch , %d global step best dev acc: %f " % (step, global_step, best_acc))
 
                     loss.append(batch_loss)
                     examples += FLAGS.batch_size

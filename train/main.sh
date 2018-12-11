@@ -69,28 +69,33 @@ if [ ! -d $CHECKPOINT_DIR ];
 fi;
 
 
-
+# 训练字向量。这里可以使用已经训练好的字向量来替换
 if [ "$1" = "vec" ]; then
   echo "train vec "
   python prepare_vec.py --train_file "$TRAIN_FILE" --dev_file "$DEV_FILE" --test_file "$TEST_FILE" --out_file "$CHAR_PRE_TRAIN_FILE"
   time $WORD2VEC -train "$CHAR_PRE_TRAIN_FILE" -output "$EMBEDING_FILE" -cbow 1 -size 100 -window 8 -negative 25 -hs 0 \
   -sample 1e-4 -threads 4 -binary 0 -iter 15 -min-count 5
 
+# 将char和index、tag【b、e、s、m】和id【0，1，2，3】对应起来。其中char对应的序号是从embedding file中获取的
+# 另外这里的tag_index意思是tag在输入文件的行中的第几列
+# 将训练语料中单词【字】和对应的词向量挂钩【通过字以及字的id】，同时，将训练语料中的字和labelid挂钩，通过label和labelid
 elif [ "$1" = "map" ]; then
-
    echo "create map file"
    python create_map_file.py --train_file "$TRAIN_FILE" --embeding_file "$EMBEDING_FILE" --map_file "$MAP_FILE" \
    --size_file "$SIZE_FILE" --tag_index "$TAG_INDEX"
 
+# 将数据格式转换为tfrecord
 elif [ "$1" = "data" ]; then
    echo "data to tfrecord";
    python text_to_tfrecords.py --train_file "$TRAIN_FILE" --dev_file "$DEV_FILE" --test_file "$TEST_FILE" --map_file \
    "$MAP_FILE" --size_file "$SIZE_FILE" --out_dir "$DATA_OUT_DIR" --tag_index "$TAG_INDEX" --max_length "$MAX_LENGTH"
 
+# 开始训练，使用tfrecord格式的数据
 elif [ "$1" = "train" ]; then
     python norm_train_recoard.py --train_file "$TRAIN_FILE_TF" --dev_file "$DEV_FILE_TF" --test_file "$TEST_FILE_TF"\
        --out_dir "$CHECKPOINT_DIR" --map_file "$MAP_FILE" --pre_embedding_file "$EMBEDING_FILE" --size_file "$SIZE_FILE"
 
+# 导出模型，存储为pb文件
 elif [ "$1" = "export" ]; then
    echo "echo model"
    python export_model.py --checkpoint_dir "$CHECKPOINT_DIR" --out_dir "$MODEL_OUT_DIR"

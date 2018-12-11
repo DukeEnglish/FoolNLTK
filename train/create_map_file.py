@@ -6,6 +6,7 @@ import pickle
 import argparse
 import json
 
+# description：将训练语料中单词【字】和对应的词向量挂钩【通过字以及字的id】，同时，将训练语料中的字和labelid挂钩，通过label和labelid
 
 OOV_STR = "<OOV>"
 PAD_STR = "<PAD>"
@@ -69,8 +70,11 @@ if __name__ == '__main__':
     with open(args.map_file, 'wb') as f:
         vocab = create_vocab(embeding_file=args.embeding_file)
         tag_to_id, id_to_tag = tag_to_map(train_file=args.train_file, tag_index=args.tag_index)
+
         print("tag map result: ")
-        print(tag_to_id)
+        print('tag_to_id',tag_to_id)
+        print('id_to_tag', id_to_tag)
+        # print('vocab', vocab)  # vocab 中是字和对应的序号
         pickle.dump((vocab, tag_to_id, id_to_tag), f)
         vocab_size = len(vocab)
         num_class = len(tag_to_id)
